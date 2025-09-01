@@ -3,14 +3,18 @@ using System.Reflection;
 using ITMSInstallerServer.IOSApplicationArchive;
 using ITMSInstallerServer.Components;
 using Microsoft.Extensions.FileProviders;
+using System.Runtime.InteropServices;
 
-namespace ITMSInstallerServer {
-    class WebServer {
+namespace ITMSInstallerServer
+{
+    class WebServer
+    {
         private WebApplication app;
         private Arguments arguments;
         private EphemeralECCCertificate certificate;
 
-        public WebServer(Arguments arguments, EphemeralECCCertificate certificate) {
+        public WebServer(Arguments arguments, EphemeralECCCertificate certificate)
+        {
             this.arguments = arguments;
             this.certificate = certificate;
 
@@ -21,12 +25,23 @@ namespace ITMSInstallerServer {
             ConfigureApp();
         }
 
-        private void ConfigureHost(WebApplicationBuilder builder) {
-            builder.WebHost.ConfigureKestrel((context, serverOptions) => {
-                serverOptions.ListenAnyIP(arguments.WebPort, listenOptions => {
-                    listenOptions.UseHttps(httpsOptions => {
-                        httpsOptions.ServerCertificate = certificate.Certificate;
-                    });
+        private void ConfigureHost(WebApplicationBuilder builder)
+        {
+            builder.WebHost.ConfigureKestrel((context, serverOptions) =>
+            {
+                serverOptions.ListenAnyIP(arguments.WebPort, listenOptions =>
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        listenOptions.UseHttps(certificate.PfxName, certificate.PfxPassword);
+                    }
+                    else
+                    {
+                        listenOptions.UseHttps(httpsOptions =>
+                        {
+                            httpsOptions.ServerCertificate = certificate.Certificate;
+                        });
+                    }
                 });
                 serverOptions.ListenAnyIP(arguments.DataPort);
             });
@@ -44,7 +59,8 @@ namespace ITMSInstallerServer {
                 .AddInteractiveServerComponents();
         }
 
-        private void ConfigureApp() {
+        private void ConfigureApp()
+        {
             app.UseStaticFiles(
                 new StaticFileOptions
                 {
@@ -57,13 +73,15 @@ namespace ITMSInstallerServer {
             app.UseAntiforgery();
             app.MapControllers();
             app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
-            app.MapFallback(async (context) => {
+            app.MapFallback(async (context) =>
+            {
                 context.Response.StatusCode = 404;
                 await context.Response.WriteAsync("404 Not Found");
             });
         }
 
-        public void Run() {
+        public void Run()
+        {
             app.Run();
         }
     }
