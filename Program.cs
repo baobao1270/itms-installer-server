@@ -1,9 +1,10 @@
-﻿using System.Net;
+﻿using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ITMSInstallerServer {
     class Program {
         public static string Version = "1.0.0";
-        public static string Name = System.AppDomain.CurrentDomain.FriendlyName;
+        public static string Name = AppDomain.CurrentDomain.FriendlyName;
 
         private static int Main(string[] shellArguments) {
             var success = Arguments.Create(shellArguments, out var arguments);
@@ -27,10 +28,17 @@ namespace ITMSInstallerServer {
 
             Console.WriteLine("正在生成临时 ECC 证书...");
             var certificate = new EphemeralECCCertificate(MachineIPAddress.GetAllIPv4());
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                File.WriteAllBytes(certificate.PfxName, certificate.Certificate.Export(X509ContentType.Pfx, certificate.PfxPassword));
+                Console.WriteLine(" + 正在写入证书临时文件：" + certificate.PfxName);
+            }            
+            
             Console.WriteLine(" + 证书生成完毕，证书指纹：" + certificate.Certificate.Thumbprint);
             Console.WriteLine(" + 注意：此证书是自签名证书，浏览器会「此连接非私人连接」。请点击「显示详细信息」，然后点击「访问此网站」。");
             Console.WriteLine(" + 　　　您也可以在该步骤中点击「查看该证书」，并确认该证书的指纹（位于「细节」——「指纹」——「SHA-1」）与上面的指纹是否一致。");
-            Console.WriteLine(" + 　　　此证书仅保存于内存中，关闭服务器后即销毁，下次启动服务器时会重新生成。");
+            Console.WriteLine(" + 　　　此证书仅对本次服务器启动有效，下次启动服务器时会重新生成。");
             Console.WriteLine(string.Empty);
 
             Console.WriteLine("正在启动服务器...");

@@ -34,7 +34,7 @@ namespace ITMSInstallerServer{
         }
 
         private static bool TryParesArguments(string[] args, out Dictionary<string, string> parsed) {
-            parsed = new Dictionary<string, string>();
+            parsed = [];
             try {
                 for (var i = 0; i < args.Length; i++) {
                     if (args[i].StartsWith("-")) {
